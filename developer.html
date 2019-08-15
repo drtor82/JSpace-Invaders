@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <title>JSpace Invaders</title>
+
+    <style>
+    	* { padding: 0; margin: 0; }
+
+    	canvas { background: #eee; display: block; margin: 0 auto; }
+
+    </style>
+
+</head>
+
+<body>
+
+
+<center>
+<h1>JSpace Invaders</h1>
+by Don Torres<BR>
+
+<canvas id="myCanvas" width="640" height="480" >
+</canvas>
+
+<h3>Game Controls:</h3>
+<ul>
+<li> Up Arrow : Starts/Pauses the game</li>
+<li> Down Arrow : Shoots Laser</li>
+<li> Left Arrow : Moves the Gunship left</li>
+<li> Right Arrow : Moves the Gunship right</li>
+<li> Only 1 shot can be fired at a time</li>
+</ul>
+</center>
+ 
+<script> // JavaScript code goes here
+
+
+////////// ----- Game Variables Section ----- //////////
+
+//  Global
+    // Some functions have their own variables that need to be semi-global.
+    // These variables are declared right above their function
+  var canvas = document.getElementById("myCanvas");
+  var ctx = canvas.getContext("2d");
+  var playGame = false;
+  var endDelay = 50;
+  var score = 0;
+  var lives = 3;
+  var layers = 150; //Field=150 layers(10 layers per row)(14 rows by field array[Enemies]) 0-10 is the player's area 140-150 is missed shot delay
+
+// Player
+  var x = canvas.width/2;
+  var rightPressed = false;
+  var leftPressed = false;
+  var speed = 15;
+  var shooting = false;
+  var shotX = x;
+
+// Enemies
+  var alienColumnCount = 11;
+  var alienRowCount = 1;
+  var field = []; // tracks what aliens are in what row
+
+
+// Temporary/Testing global variables
+
+
+
+////////// ----- Player Controls Section ----- //////////
+
+document.addEventListener("keydown", keyDownHandler, false);
+document.addEventListener("keyup", keyUpHandler, false);
+
+function keyDownHandler(e) {
+    if (e.key == "Right" || e.key == "ArrowRight") {
+      rightPressed = true;
+      x += speed;
+      if (shooting == true) shotX -= speed;
+    }
+    else if (e.key == "Left" || e.key == "ArrowLeft") {
+      leftPressed = true;
+      x -= speed;
+      if (shooting == true) shotX += speed;
+    }
+    else if (e.key == "Up" || e.key == "ArrowUp") {
+        if (playGame == false) {
+            playGame = true;
+	} else if (playgame = true) {
+            playGame = false;
+        }
+    }
+    else if (e.key == "Down" || e.key == "ArrowDown") {
+      if (shooting = false && playGame == true){
+        shotX = canvas.width/2;
+        shooting = true;  
+      }
+    }
+}
+
+function keyUpHandler(e) {
+    if (e.key == "Right" || e.key == "ArrowRight") {
+        rightPressed = false;
+    }
+    else if (e.key == "Left" || e.key == "ArrowLeft") {
+        leftPressed = false;
+    }
+}
+
+////////// ----- Game Handling Section ----- /////
+
+// This creates the alien status array
+var aliens = [];
+for (var c = 0; c < alienColumnCount; c++) {
+  aliens[c] = [];
+  for (var r = 0; r < alienRowCount; r++) {
+    aliens[c][r] = { x: 0, y: 0, status: 1 };
+    if (r == alienRowCount || r == alienRowCount - 1) aliens[c][r].points = 10;
+    else if (r == alienRowCount - 2) aliens[c][r].points = 20;
+    else if (r <= alienRowCount - 3) aliens[c][r].points = 30;
+  }
+
+}
+
+
+////////// ----- Drawing the Player Screen & Data ----- //////////
+
+///// Background is always first /////
+function drawBG() {
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+///// Battlefield Area /////
+
+// Draw aliens goes here
+
+function shotFlame() {
+    var letters = "0123456789ABCDEF"; 
+    var color = '#'; 
+    for (var i = 0; i < 6; i++){
+      if (i < 4) {color += letters[15 - (Math.floor(Math.random() * 4))]; }
+      else { color += letters[(Math.floor(Math.random() * 16))]; }
+    }
+    return color;
+}
+
+var shotShrink = 1;
+var shotOffset = canvas.height + layers; // +layers prevents a loading game flash bug
+function drawShot() {
+  if (shooting == true) {
+    ctx.beginPath();
+    ctx.arc(shotX, shotOffset, layers - shotShrink, 0, Math.PI * 2);
+    ctx.fillStyle = '#777777';
+    ctx.fill();
+    ctx.closePath();
+    ctx.beginPath();
+    ctx.arc(shotX, shotOffset, (layers - shotShrink) *.75, 0, Math.PI * 2);
+    ctx.fillStyle = shotFlame();
+    ctx.fill();
+    ctx.closePath();
+    ctx.beginPath();
+    ctx.arc(shotX, shotOffset, (layers - shotShrink) *.5, 0, Math.PI * 2);
+    ctx.fillStyle = shotFlame();
+    ctx.fill();
+    ctx.closePath();
+    shotShrink++;
+    if (shotShrink >= layers) { // Resets the shot
+      shotShrink = 1;
+      shotOffset = canvas.height;
+      shotX = canvas.width/2;
+      shooting = false;
+    }
+    if (shotOffset >= canvas.height/2) { // Adjusts height (y) of the shot as seen by player
+      shotOffset = (layers/shotShrink*240);
+    }
+  }
+}
+
+///// HMI Section /////
+function playerData() {
+// Draw Score
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#FFFFFF";
+    ctx.textAlign = "center"; 
+    ctx.fillText("Score", 320, 80);
+    ctx.fillText(score, 320, 100);
+// Draw Lives
+    ctx.fillStyle = "#0095DD";
+    ctx.textAlign = "right"; 
+    ctx.fillText("Lives: "+lives, canvas.width-8, 20);
+// Draw Game Status
+    ctx.textAlign = "left"; 
+    playGame == true ? ctx.fillText("Game on!", 8, 20) : ctx.fillText("Game Paused", 8, 20);
+}
+
+function drawCockpit() {
+// Reticle
+  // Top
+    ctx.beginPath();
+    ctx.rect(canvas.width/2 - 1, canvas.height/2 - 30 , 2, 20);
+    ctx.fillStyle = "#0095DD";
+    ctx.fill();
+    ctx.closePath();
+  // Bottom
+    ctx.beginPath();
+    ctx.rect(canvas.width/2 - 1, canvas.height/2 + 10 , 2, 20);
+    ctx.fillStyle = "#0095DD";
+    ctx.fill();
+    ctx.closePath();
+  // Left
+    ctx.beginPath();
+    ctx.rect(canvas.width/2 - 30, canvas.height/2 - 1 , 20, 2);
+    ctx.fillStyle = "#0095DD";
+    ctx.fill();
+    ctx.closePath();
+  // Right
+    ctx.beginPath();
+    ctx.rect(canvas.width/2 + 10, canvas.height/2 - 1 , 20, 2);
+    ctx.fillStyle = "#0095DD";
+    ctx.fill();
+    ctx.closePath();
+}
+
+function draw() {
+// Background first
+  drawBG();
+
+// Draw aliens
+	/*
+  Starting with rearmost row and working to Player (HMI)
+	*/
+
+
+  drawShot();
+
+// HMI is last drawn
+  drawCockpit();
+  playerData();
+}
+
+var interval = setInterval(draw, 10);
+
+
+</script>
+
+
+</body>
+
+</html>
